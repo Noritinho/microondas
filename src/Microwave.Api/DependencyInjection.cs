@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 namespace Microwave.Api;
 
@@ -9,6 +10,13 @@ public static class DependencyInjection
     public static void AddServices(this IServiceCollection services, WebApplicationBuilder builder)
     {
         services.AddIdentity(builder);
+
+        services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new() { Title = "Microwave API", Version = "v1" });
+
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme());
+            });
     }
     
     private static void AddIdentity(this IServiceCollection services, WebApplicationBuilder builder)
@@ -30,6 +38,5 @@ public static class DependencyInjection
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey!))
                 };
             });
-
     }
 }
