@@ -23,16 +23,16 @@ Este projeto é uma implementação simulada de um micro-ondas, com foco nas fun
 Os modelos de domínio encapsulam regras e comportamentos relacionados.
 Uso de Value Objects para representar conceitos imutáveis e garantir integridade dos dados.
 
-> **Heating**: Modelo de aquecimento do microondas, representa as informações de aquecimento(duração, potência).
-> **HeatingTimer**: Modelo que representa o timer do microondas, ou seja, tempo percorrido, tempo total, tempo que falta para acabar, se está parado ou não e etc.
-> **Preset**: Modelo de aquecimentos customizados.
+> **Heating**: Modelo de aquecimento do microondas, representa as informações de aquecimento(duração, potência).<br>
+> **HeatingTimer**: Modelo que representa o timer do microondas, ou seja, tempo percorrido, tempo total, tempo que falta para acabar, se está parado ou não e etc.<br>
+> **Preset**: Modelo de aquecimentos customizados.<br>
 
 # Separação em Camadas:
-> **Api**: REsponsável pela comunicação do servidor ao client, contem todos os endpoins devidamente autorizados e um socket para o timer do microondas.
-> **DOmínio**: Contém as entidades, objetos de valor, enums e exceções que representam o core do negócio.
-> **Aplicação**: Implementa os casos de uso, mantendo a lógica de negócio isolada.
-> **Infraestrutura**: Persinstência e autorização.
-> **Interface (UI)**: Interação com o usuário, foi utilizado Blazor para controle do micro-ondas.
+> **Api**: REsponsável pela comunicação do servidor ao client, contem todos os endpoins devidamente autorizados e um socket para o timer do microondas.<br>
+> **DOmínio**: Contém as entidades, objetos de valor, enums e exceções que representam o core do negócio.<br>
+> **Aplicação**: Implementa os casos de uso, mantendo a lógica de negócio isolada.<br>
+> **Infraestrutura**: Persinstência e autorização.<br>
+> **Interface (UI)**: Interação com o usuário, foi utilizado Blazor para controle do micro-ondas.<br>
 
 
 # Programas de aquecimento pré-definidos:
