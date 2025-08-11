@@ -1,0 +1,71 @@
+@Microwave.Api_HostAddress = http://localhost:5197
+
+POST http://localhost:5001/api/microwave/set
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEiLCJuYW1lIjoibWV1VXN1YXJpbyIsIm5iZiI6MTc1NDc5ODY1MywiZXhwIjoxNzU4Mzk1MDUzLCJpYXQiOjE3NTQ3OTg2NTN9.VAj9R1u7AHcZOXb73-4JQ1Nj8YigfP6jVL6e8e1We1s
+
+{
+  "heatDuration": "10",
+  "potency": 10
+}
+
+###
+
+PUT http://localhost:5197/api/microwave/cancel
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEiLCJuYW1lIjoibWV1VXN1YXJpbyIsIm5iZiI6MTc1NDc5ODY1MywiZXhwIjoxNzU4Mzk1MDUzLCJpYXQiOjE3NTQ3OTg2NTN9.VAj9R1u7AHcZOXb73-4JQ1Nj8YigfP6jVL6e8e1We1s
+
+{
+
+}
+
+###
+POST http://localhost:5001/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "userName": "meuUsuario",
+  "password": "minhaSenha123"
+}
+
+###
+
+POST http://localhost:5197/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "userName": "meuUsuario",
+  "password": "minhaSenha123"
+}
+
+###
+
+POST http://localhost:5197/api/microwave/preset
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEiLCJuYW1lIjoibWV1VXN1YXJpbyIsIm5iZiI6MTc1NDc5ODY1MywiZXhwIjoxNzU4Mzk1MDUzLCJpYXQiOjE3NTQ3OTg2NTN9.VAj9R1u7AHcZOXb73-4JQ1Nj8YigfP6jVL6e8e1We1s
+
+{
+  "identifier": "teste1",
+  "name": "Microwave Chicken",
+  "food": "Chicken",
+  "duration": 200,
+  "potency": 10,
+  "instructions": "Cook until hot"
+}
+
+
+
+###
+
+GET http://localhost:5001/api/microwave/preset
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEiLCJuYW1lIjoibWV1VXN1YXJpbyIsIm5iZiI6MTc1NDc5ODY1MywiZXhwIjoxNzU4Mzk1MDUzLCJpYXQiOjE3NTQ3OTg2NTN9.VAj9R1u7AHcZOXb73-4JQ1Nj8YigfP6jVL6e8e1We1s
+
+
+###

@@ -1,0 +1,64 @@
+@using System.Text.Json
+@using Microwave.View.shared
+@inject HttpClient Http
+@rendermode InteractiveServer
+
+<div style="padding:20px; max-width:300px; margin:0 auto; border-radius:8px;">
+    <h3>Login</h3>
+    <input @bind="Username" placeholder="Usuário" class="form-control mb-2" />
+    <input @bind="Password" type="password" placeholder="Senha" class="form-control mb-2" />
+    <button @onclick="DoLogin" class="btn btn-primary">Entrar</button>
+
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <p style="color:red" class="mt-2">@Error</p>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<string> OnTokenReceived { get; set; }
+    private string Username = "";
+    private string Password = "";
+    private string Error = "";
+
+    public void Clear()
+    {
+        Error = "";
+        Username = "";
+        Password = "";
+        StateHasChanged();
+    }
+
+    private async Task DoLogin()
+    {
+        Error = "";
+        var loginData = new { username = Username, password = Password };
+        try
+        {
+            var response = await Http.PostAsJsonAsync(Server.Api + "auth/login", loginData);
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+                if (json.TryGetProperty("token", out var tokenElement))
+                {
+                    var token = tokenElement.GetString();
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        await OnTokenReceived.InvokeAsync(token);
+                        Server.Token = token;
+                        return;
+                    }
+                }
+                Error = "Resposta inválida do servidor.";
+            }
+            else
+            {
+                Error = "Usuário ou senha inválidos.";
+            }
+        }
+        catch
+        {
+            Error = "Erro na requisição.";
+        }
+    }
+}

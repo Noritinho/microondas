@@ -1,0 +1,53 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste HeatingHub SignalR</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+</head>
+<body>
+    <h1>Teste HeatingHub SignalR</h1>
+
+    <button id="startHeatingBtn">Iniciar Aquecimento</button>
+
+    <div id="messages" style="margin-top:20px; border:1px solid #ccc; padding:10px;">
+        <strong>Mensagens:</strong>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Exemplo de token obtido após login (substituir se precisar)
+            const token = "SEU_TOKEN_JWT_AQUI";
+
+            // Criar conexão com o Hub na API
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("https://localhost:5001/microwaveHub", {
+                    accessTokenFactory: () => token
+                })
+                .configureLogging(signalR.LogLevel.Information)
+                .build();
+
+            const messagesDiv = document.getElementById("messages");
+
+            // Recebe mensagens do servidor
+            connection.on("ReceiveHeatingData", (response) => {
+                const msg = `Tempo restante: ${response.timeRemainingValue} segundos, Potência: ${response.potency}`;
+                const p = document.createElement("p");
+                p.textContent = msg;
+                messagesDiv.appendChild(p);
+            });
+
+            // Conecta ao Hub
+            connection.start()
+                .then(() => console.log("Conectado ao HeatingHub!"))
+                .catch(err => console.error("Erro ao conectar: ", err));
+
+            // Botão para disparar StartHeating
+            document.getElementById("startHeatingBtn").addEventListener("click", () => {
+                connection.invoke("StartHeating")
+                    .catch(err => console.error(err));
+            });
+        });
+    </script>
+</body>
+</html>

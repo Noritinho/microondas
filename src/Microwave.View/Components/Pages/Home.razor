@@ -1,0 +1,417 @@
+﻿@page "/"
+@using Microwave.Domain.Contracts.Responses
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microwave.View.Components.Layout
+@using Microwave.View.Contracts.Responses
+@using Microwave.View.shared
+@inject IJSRuntime JS
+
+
+<PageTitle>Micro-ondas</PageTitle>
+
+<div class="micro-ondas-container" tabindex="0" @onkeydown="HandleKeyDown">
+
+    <div class="visor">
+        <h2>@(_timeRemaining.View)</h2>
+        <div class="potencia-display">Potência: @_powerLevel</div>
+        <h1>@(_response)</h1>
+    </div>
+
+
+    <div class="botoes-container">
+        @for (int i = 1; i <= 9; i++)
+        {
+            var digit = i;
+            <button @onclick="() => AppendDigit(digit)" class="btn-numeric">@i</button>
+        }
+        <button @onclick="Clear" class="btn-clear">Limpar [ Backspace ]</button>
+        <button @onclick="() => AppendDigit(0)" class="btn-numeric">0</button>
+        <button @onclick="TogglePower" class="btn-power">Potência [ P ]</button>
+        <button @onclick="Start" class="btn-start">Iniciar [ Enter ]</button>
+        <button @onclick="FastStart" class="btn-start" disabled="@_isRunning">Inicio Rápido [ R ]</button>
+        <button @onclick="OpenPresetModal" class="btn-start" disabled="@_isRunning">Customizados [ C ]</button>
+    </div>
+    
+    <div>
+        <AuthModal @ref="_authModal" />
+    </div>
+    
+    <PresetSelectModal @ref="_presetModal" OnPresetSelected="ChoosePreset" />
+</div>
+
+@code {
+    private HubConnection? _hubConnection;
+
+    private PresetSelectModal _presetModal = null;
+    private AuthModal _authModal;
+    private bool _modalOpened = false;
+    
+    private struct TimeRemaining
+    {
+        public int Value { get; set; }
+        public string View { get; set; }
+    }
+
+    private TimeRemaining _timeRemaining = new TimeRemaining { Value = 30, View = "Hello World! ^ - ^" };
+    private bool _isRunning = false;
+    private string inputTime = "";
+    private int _powerLevel = 10;
+    private string _response = "";
+    private bool _isPotency = false;
+
+    
+    private string? _identifier;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (string.IsNullOrWhiteSpace(Server.Token) && firstRender)
+        {
+            _modalOpened = true;
+
+            if (_authModal != null)
+            {
+                _authModal.Open();
+                StateHasChanged();
+            }
+            await _authModal.WaitForTokenAsync();
+        }
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri(Server.Hub), options => { options.AccessTokenProvider = () => Task.FromResult(Server.Token); })
+            .Build();
+
+        _hubConnection.On<HeatTimerResponse>("ReceiveHeatingData", response =>
+        {
+            _timeRemaining.View = response.TimeRemaining;
+            _timeRemaining.Value = response.TimeRemainingValue;
+            _response = "Esquentando";
+            _isRunning = true;
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On<HeatTimerCompletedResponse>("ReceiveHeatingCompleted", response =>
+        {
+            _timeRemaining.View = response.Message;
+            _timeRemaining.Value = 30;
+            _response = "";
+            _isRunning = false;
+            InvokeAsync(StateHasChanged);
+        });
+
+        await _hubConnection.StartAsync();
+    }
+    
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+    }
+
+    private string displayText
+    {
+        get
+        {
+            if (_isRunning)
+            {
+                return $"{_timeRemaining.View} | Potência: {_powerLevel}";
+            }
+            else if (!string.IsNullOrEmpty(inputTime))
+            {
+                return _timeRemaining.View;
+            }
+            else
+            {
+                return _timeRemaining.View;
+            }
+        }
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (int.TryParse(e.Key, out int digit))
+        {
+            AppendDigit(digit);
+        }
+        else
+        {
+            switch (e.Key)
+            {
+                case "Enter":
+                    Start();
+                    break;
+                case "Backspace":
+                case "Delete":
+                    Clear();
+                    break;
+                case "p":
+                    TogglePower();
+                    break;
+                case "c":
+                    OpenPresetModal();
+                    break;
+                case "r":
+                    FastStart();
+                    break;
+            }
+        }
+    }
+
+    private void AppendDigit(int digit)
+    {
+        if (_isRunning) return;
+
+        if (_isPotency)
+        {
+            int.TryParse(_powerLevel.ToString() + digit.ToString(), out int powerDigit);
+            _powerLevel = powerDigit;
+            return;
+        }
+        
+        var currentSeconds = 0;
+
+        if (_timeRemaining.View.Contains(":"))
+        {
+            var parts = _timeRemaining.View.Split(':');
+            if (parts.Length == 2 &&
+                int.TryParse(parts[0], out int min) &&
+                int.TryParse(parts[1], out int sec))
+            {
+                currentSeconds = min * 60 + sec;
+            }
+        }
+        else
+        {
+            int.TryParse(_timeRemaining.View, out currentSeconds);
+        }
+
+        var newSecondsString = currentSeconds.ToString() + digit.ToString();
+
+        if (!int.TryParse(newSecondsString, out int newSeconds)) return;
+        _timeRemaining.Value = Math.Min(newSeconds, int.MaxValue);
+
+        if (_timeRemaining.Value >= 60)
+        {
+            var minutes = _timeRemaining.Value / 60;
+            var seconds = _timeRemaining.Value % 60;
+            _timeRemaining.View = $"{minutes}:{seconds:D2}";
+        }
+        else
+        {
+            _timeRemaining.View = _timeRemaining.Value.ToString();
+        }
+    }
+    
+    private void TogglePower()
+    {
+        if (_isRunning) return;
+        _isPotency = !_isPotency;
+        _response = _isPotency ? "Digite a potência" : "Digite a duração";
+    }
+
+    private void Clear()
+    {
+        if (_isRunning)
+            Stop();
+        else
+        {
+            _response = "";
+            _timeRemaining.View = "";
+            _powerLevel = 10;
+        }
+            
+    }
+
+    private async Task Start()
+    {
+        var data = new { HeatingDuration = (int?)_timeRemaining.Value, Potency = _powerLevel };
+
+        var request = new HttpRequestMessage(HttpMethod.Post, Server.Api + "microwave/set")
+        {
+            Content = !_isRunning ? JsonContent.Create(data) : JsonContent.Create(new { })
+        };
+
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Server.Token);
+
+        var response = await Http.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _response = await ErrorHandler.HandleApiError(response);
+            return;
+        }
+            
+
+        _response = "Ok";
+        
+        await _hubConnection.SendCoreAsync("StartHeating", Array.Empty<object>(), CancellationToken.None);
+    }
+
+    private async Task FastStart()
+    {
+        if (_isRunning) return;
+
+        var data = new { };
+
+        var request = new HttpRequestMessage(HttpMethod.Post, Server.Api + "microwave/set")
+        {
+            Content = JsonContent.Create(data)
+        };
+
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Server.Token);
+
+        var response = await Http.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
+            _response = await ErrorHandler.HandleApiError(response);
+
+        _response = "Ok";
+
+        await _hubConnection.SendCoreAsync("StartHeating", Array.Empty<object>(), CancellationToken.None);
+    }
+
+    private async void OpenPresetModal()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, Server.Api + "microwave/preset");
+
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Server.Token);
+
+        var response = await Http.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
+            _response = await ErrorHandler.HandleApiError(response);
+
+        _response = "Ok";
+
+        var teste = await response.Content.ReadAsStringAsync();
+
+        var heatingResponse = System.Text.Json.JsonSerializer.Deserialize<List<PresetSelectModal.PresetModel>>(
+            await response.Content.ReadAsStringAsync());
+
+        _presetModal.Show(heatingResponse);
+    }
+
+    private async void ChoosePreset(string identifier)
+    {
+        _identifier = identifier;
+        
+        var data = new { Identifier = _identifier };
+
+        var request = new HttpRequestMessage(HttpMethod.Post, Server.Api + "microwave/setHeatPreset")
+        {
+            Content = JsonContent.Create(data)
+        };
+
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Server.Token);
+
+        var response = await Http.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
+            return;
+        
+        await _hubConnection.SendCoreAsync("StartHeating", Array.Empty<object>(), CancellationToken.None);
+    }
+
+    private async void Stop()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Put, Server.Api + "microwave/cancel");
+
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Server.Token);
+
+        var response = await Http.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _response = await ErrorHandler.HandleApiError(response);
+        }
+        
+        _response = "Parado";
+    }
+}
+
+<style>
+    .micro-ondas-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: auto;
+        height: 90vh;
+        padding: 20px;
+        border: 2px solid black;
+        border-radius: 10px;
+        font-family: monospace;
+        outline: none;
+    }
+
+    .visor {
+        background-color: #000;
+        color: #0f0;
+        padding: 10px 20px;
+        margin-bottom: 20px;
+        width: 100%;
+        text-align: right;
+        border-radius: 5px;
+    }
+
+    .potencia-display {
+        font-size: 1.1em;
+        color: deepskyblue;
+        margin-top: 5px;
+        font-weight: bold;
+    }
+
+    .botoes-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        width: 100%;
+    }
+
+    .btn-numeric, .btn-clear, .btn-start, .btn-power {
+        font-size: 1.2em;
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        background-color: #f0f0f0;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+        .btn-numeric:hover, .btn-clear:hover, .btn-power:hover, .btn-start:hover:not(:disabled) {
+            background-color: #ddd;
+        }
+
+    .btn-clear {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .btn-power {
+        background-color: deepskyblue;
+        color: white;
+    }
+
+    .btn-start {
+        background-color: #28a745;
+        color: white;
+        grid-column: 1 / span 3;
+    }
+
+    .btn-numeric:nth-of-type(10) {
+        grid-column: 3 / span 1;
+    }
+
+    .btn-start:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+    }
+</style>

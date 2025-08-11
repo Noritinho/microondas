@@ -1,0 +1,59 @@
+@using Microwave.View.shared
+@inject HttpClient Http
+@rendermode InteractiveServer
+
+<div style="padding:20px; max-width:300px; margin:0 auto; border-radius:8px;">
+    <h3>Registrar</h3>
+    <input @bind="Username" placeholder="Usuário" class="form-control mb-2" />
+    <input @bind="Password" type="password" placeholder="Senha" class="form-control mb-2" />
+    <button @onclick="DoRegister" class="btn btn-success">Registrar</button>
+
+    @if (!string.IsNullOrEmpty(Message))
+    {
+        <p style="color:green" class="mt-2">@Message</p>
+    }
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <p style="color:red" class="mt-2">@Error</p>
+    }
+</div>
+
+@code {
+    private string Username = "";
+    private string Password = "";
+    private string Message = "";
+    private string Error = "";
+
+    public void Clear()
+    {
+        Username = "";
+        Password = "";
+        Message = "";
+        Error = "";
+        StateHasChanged();
+    }
+
+    private async Task DoRegister()
+    {
+        Message = "";
+        Error = "";
+
+        var registerData = new { userName = Username, password = Password };
+        try
+        {
+            var response = await Http.PostAsJsonAsync(Server.Api + "auth/register", registerData);
+            if (response.IsSuccessStatusCode)
+            {
+                Message = "Usuário registrado com sucesso!";
+            }
+            else
+            {
+                Error = "Erro ao registrar usuário.";
+            }
+        }
+        catch
+        {
+            Error = "Erro na requisição.";
+        }
+    }
+}

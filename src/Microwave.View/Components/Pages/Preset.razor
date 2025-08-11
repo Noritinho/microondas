@@ -1,0 +1,95 @@
+﻿@page "/preset"
+@using Microwave.View.Components.Layout
+@using Microwave.View.shared
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Cadastrar Preset</PageTitle>
+
+<h3>Cadastrar Preset</h3>
+
+<EditForm Model="@_presetModel" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group mb-3">
+        <label>Identifier</label>
+        <InputText class="form-control" @bind-Value="_presetModel.Identifier" />
+        <ValidationMessage For="@(() => _presetModel.Identifier)" />
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Name</label>
+        <InputText class="form-control" @bind-Value="_presetModel.Name" />
+        <ValidationMessage For="@(() => _presetModel.Name)" />
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Food</label>
+        <InputText class="form-control" @bind-Value="_presetModel.Food" />
+        <ValidationMessage For="@(() => _presetModel.Food)" />
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Duration (segundos)</label>
+        <InputNumber class="form-control" @bind-Value="_presetModel.Duration" />
+        <ValidationMessage For="@(() => _presetModel.Duration)" />
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Potency (0–10)</label>
+        <InputNumber class="form-control" @bind-Value="_presetModel.Potency" />
+        <ValidationMessage For="@(() => _presetModel.Potency)" />
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Instructions</label>
+        <InputTextArea class="form-control" @bind-Value="_presetModel.Instructions" />
+        <ValidationMessage For="@(() => _presetModel.Instructions)" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Salvar</button>
+</EditForm>
+
+<ErrorPopUp @ref="_errorPopup" />
+
+@code {
+    private PresetModel _presetModel = new();
+    private ErrorPopUp _errorPopup;
+
+    private async void HandleValidSubmit()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, Server.Api + "microwave/preset")
+        {
+            Content = JsonContent.Create(_presetModel)
+        };
+
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Server.Token);
+
+        var response = await Http.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+            return;
+
+        var errorMessage = await ErrorHandler.HandleApiError(response);
+        _errorPopup.Show(errorMessage);
+    }
+
+    public class PresetModel
+    {
+        public string Identifier { get; set; }
+        public string Name { get; set; }
+        public string Food { get; set; }
+        public int Duration { get; set; }
+        public int Potency { get; set; }
+        public string? Instructions { get; set; }
+        public HeatingPresetType Custom { get; set; }
+    }
+    
+    public enum HeatingPresetType
+    {
+        Custom = 0,
+        Default = 1,
+    }
+}

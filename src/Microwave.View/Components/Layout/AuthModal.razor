@@ -1,0 +1,103 @@
+@using Microwave.View.shared
+@rendermode InteractiveServer
+
+@if (IsOpen)
+{
+    <div class="modal" style="display:block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div style="background:white; padding:20px; max-width:350px; margin:100px auto; border-radius:8px;">
+            <h3>Autenticação</h3>
+
+            <div style="margin-bottom: 10px;">
+                <button class="btn btn-link" @onclick="() => ShowLogin()" disabled="@IsLoginOpen">Login</button>
+                <button class="btn btn-link" @onclick="() => ShowRegister()" disabled="@IsRegisterOpen">Registrar</button>
+            </div>
+
+            <div>
+                @if (IsLoginOpen)
+                {
+                    <LoginModal @ref="loginModal" OnTokenReceived="OnTokenReceived" />
+                }
+                else if (IsRegisterOpen)
+                {
+                    <RegisterModal @ref="registerModal" />
+                }
+            </div>
+
+            <div class="mt-3">
+                <button class="btn btn-secondary" @onclick="TryClose">Fechar</button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Error))
+            {
+                <p class="text-danger mt-2">@Error</p>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private LoginModal loginModal;
+    private RegisterModal registerModal;
+
+    private bool IsOpen = string.IsNullOrWhiteSpace(Server.Token);
+    private bool IsLoginOpen = true;
+    private bool IsRegisterOpen = false;
+
+    private string Token = null;
+    private string Error;
+
+    public void Open()
+    {
+        StateHasChanged();
+    }
+
+    private void ShowLogin()
+    {
+        IsLoginOpen = true;
+        IsRegisterOpen = false;
+        Error = "";
+        loginModal?.Clear();
+        StateHasChanged();
+    }
+
+    private void ShowRegister()
+    {
+        IsRegisterOpen = true;
+        IsLoginOpen = false;
+        Error = "";
+        registerModal?.Clear();
+        StateHasChanged();
+    }
+
+    private void OnTokenReceived(string token)
+    {
+        Token = token;
+        Error = "";
+        _loginTcs?.TrySetResult(token);
+        StateHasChanged();
+        TryClose();
+    }
+
+    private void TryClose()
+    {
+        if (!string.IsNullOrEmpty(Token))
+        {
+            IsOpen = false;
+            Error = "";
+            StateHasChanged();
+        }
+        else
+        {
+            Error = "Você precisa estar autenticado para fechar o modal.";
+        }
+    }
+    
+    private TaskCompletionSource<string> _loginTcs;
+
+    public Task<string> WaitForTokenAsync()
+    {
+        _loginTcs = new TaskCompletionSource<string>();
+        Open();
+        return _loginTcs.Task;
+    }
+}

@@ -1,0 +1,146 @@
+﻿@using System.Text.Json.Serialization
+@if (isVisible)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Selecionar Preset</h5>
+                    <button type="button" class="btn-close" @onclick="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if (presets == null || !presets.Any())
+                    {
+                        <p>Carregando presets...</p>
+                    }
+                    else
+                    {
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Identifier</th>
+                                    <th>Name</th>
+                                    <th>Food</th>
+                                    <th>Potency</th>
+                                    <th>Duration</th>
+                                    <th>Instruções</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var preset in presets)
+                                {
+                                    <tr>
+                                        <td style="@(preset.Type == HeatingPresetType.Default ? "font-style: italic;" : "")">
+                                            @preset.Identifier
+                                        </td>
+                                        <td>@preset.Name</td>
+                                        <td>@preset.Food</td>
+                                        <td>@preset.Potency</td>
+                                        <td>@preset.Duration</td>
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(preset.Instructions))
+                                            {
+                                                <button class="btn btn-sm btn-info" @onclick="() => ShowInstructions(preset.Instructions)">
+                                                    Ver
+                                                </button>
+                                            }
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary" @onclick="() => SelectPreset(preset)">
+                                                Selecionar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showInstructionModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Instruções</h5>
+                    <button type="button" class="btn-close" @onclick="CloseInstructions"></button>
+                </div>
+                <div class="modal-body">
+                    <p>@currentInstructions</p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isVisible;
+    private bool showInstructionModal;
+    private string currentInstructions;
+
+    private List<PresetModel> presets;
+
+    [Parameter] public EventCallback<string> OnPresetSelected { get; set; }
+
+    public void Show(List<PresetModel> availablePresets)
+    {
+        presets = availablePresets;
+        isVisible = true;
+        StateHasChanged();
+    }
+
+    private void Close()
+    {
+        isVisible = false;
+        StateHasChanged();
+    }
+
+    private async Task SelectPreset(PresetModel preset)
+    {
+        await OnPresetSelected.InvokeAsync(preset.Identifier);
+        Close();
+    }
+
+    private void ShowInstructions(string instructions)
+    {
+        currentInstructions = instructions;
+        showInstructionModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseInstructions()
+    {
+        showInstructionModal = false;
+        StateHasChanged();
+    }
+
+    public class PresetModel
+    {
+        [JsonPropertyName("identifier")]
+        public string Identifier { get; set; }
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+        [JsonPropertyName("food")]
+        public string Food { get; set; }
+        [JsonPropertyName("duration")]
+        public int Duration { get; set; }
+        [JsonPropertyName("potency")]
+        public byte Potency { get; set; }
+        [JsonPropertyName("instructions")]
+        public string? Instructions { get; set; }
+        [JsonPropertyName("type")]
+        public HeatingPresetType Type { get; set; }
+    }
+
+    public enum HeatingPresetType
+    {
+        Custom = 0,
+        Default = 1,
+    }
+}
