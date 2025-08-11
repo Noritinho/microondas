@@ -37,6 +37,7 @@ Uso de Value Objects para representar conceitos imutáveis e garantir integridad
 
 # Programas de aquecimento pré-definidos:
 Se encontram em HeatingPresets.Json
+customizados são salvos no banco.,
 
 # Tratamento de exceções:
 Exceções relacionadas ao dominio são tratadas em DOmainException e capturadas pelo middleware. 
